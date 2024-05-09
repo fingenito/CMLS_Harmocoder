@@ -93,8 +93,11 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    const int numInputChannels = getTotalNumInputChannels();
+    const int delayBufferSize = 2 * sampleRate * samplesPerBlock; // buffer which contains 2 seconds of audio
+    // NOTE: the delay buffer must be bigger than the buffer containing the input audio because we want to be able to read samples from the past
+
+    mDelayBuffer.setSize(numInputChannels, delayBufferSize);
 }
 
 void DelayAudioProcessor::releaseResources()
@@ -135,26 +138,43 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
+
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        // to know how many samples we have both in the input buffer and in the delay buffer (NOTE: they have different lengths)
+        const int bufferLength = buffer.getNumSamples();
+        const int delayBufferLength = mDelayBuffer.getNumSamples();
 
-        // ..do something to the data...
+        // get the pointers to the input buffer and to the delay buffer
+        const float* bufferData = buffer.getReadPointer(channel);
+        const float* delayBufferData = mDelayBuffer.getReadPointer(channel);
+
+        // copy the data from the input buffer to the delay buffer
+
+        // if we have enough space in the delay buffer no problem
+        if (delayBufferLength > bufferLength + mWritePosition)
+        {
+            mDelayBuffer.copyFromWithRamp(channel, mWritePosition, bufferData, bufferLength, 0.8, 0.8);
+        }
+        else {
+            const int bufferRemaining = delayBufferLength - mWritePosition;
+
+            // if we don't have enough space in the delay buffer, we fill the remaining space (not coping the whole input buffer but the quantity "bufferRemaining")
+            mDelayBuffer.copyFromWithRamp(channel, mWritePosition, bufferData, bufferRemaining, 0.8, 0.8);
+            // and then we copy the remaining data to the beginning of the delay buffer (the quantity to copy is the remaining data in the input buffer)
+            mDelayBuffer.copyFromWithRamp(channel, 0,  bufferData, bufferLength - bufferRemaining, 0.8, 0.8);
+
+        }
+        
+        // mWritePosition starts at zero and after every time I have copied the data from the input buffer to the delay buffer, I increment it by the number of samples in the input buffer
+        mWritePosition += bufferLength;
+        // use the modulo operator to wrap around the write position if it exceeds the length of the delay buffer
+        mWritePosition %= delayBufferLength;
+
     }
 }
 
