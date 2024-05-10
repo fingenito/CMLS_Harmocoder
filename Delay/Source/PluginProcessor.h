@@ -53,9 +53,20 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    void DelayAudioProcessor::fillDelayBuffer(int channel, const int bufferLength, const int delayBufferLength, const float* bufferData, const float* delayBufferData);
+    void DelayAudioProcessor::getFromDelayBuffer(juce::AudioBuffer<float>& buffer, int channel, const int bufferLength, const int delayBufferLength, const float* bufferData, const float* delayBufferData);
+    void DelayAudioProcessor::feedbackDelay(int channel, const int bufferLength, const int delayBufferLength, float* dryBuffer);
+    
+    void setDelayTime(int newDelayTime)
+    {
+        		mDelayTime = newDelayTime;
+    }
+
 private:
     juce::AudioBuffer<float> mDelayBuffer;
     int mWritePosition{ 0 }; //initialize write position to 0
+    int mSampleRate{ 44100 }; //initialize global sample rate to 44100
+    int mDelayTime{ 500 }; //initialize delay time to 500ms
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessor)
 };
