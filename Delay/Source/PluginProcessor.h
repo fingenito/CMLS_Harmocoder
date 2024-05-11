@@ -59,14 +59,17 @@ public:
     
     void setDelayTime(int newDelayTime)
     {
-        		mDelayTime = newDelayTime;
+       
+        mDelayTime.setTargetValue(newDelayTime);
+                
     }
 
 private:
     juce::AudioBuffer<float> mDelayBuffer;
     int mWritePosition{ 0 }; //initialize write position to 0
     int mSampleRate{ 44100 }; //initialize global sample rate to 44100
-    int mDelayTime{ 500 }; //initialize delay time to 500ms
+    //int mDelayTime{ 500 }; //initialize delay time to 500ms
+    juce::LinearSmoothedValue<float> mDelayTime{ 500 }; //initialize delay time to 500ms
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessor)
 };

@@ -102,6 +102,8 @@ void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     mDelayBuffer.setSize(numInputChannels, delayBufferSize);
 
     mDelayBuffer.clear();
+
+    mDelayTime.reset(sampleRate, 0.025);
 }
 
 void DelayAudioProcessor::releaseResources()
@@ -168,7 +170,8 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     // use the modulo operator to wrap around the write position if it exceeds the length of the delay buffer
     mWritePosition %= delayBufferLength;
     // Note we don't want to modify the mWritePosition in the for loop which iterates over the channels! Because we want to increment it only once after we have copied the data from all the channels
-
+    
+    
 }
 
 void DelayAudioProcessor::fillDelayBuffer(int channel, const int bufferLength, const int delayBufferLength, const float* bufferData, const float* delayBufferData)
@@ -191,9 +194,11 @@ void DelayAudioProcessor::fillDelayBuffer(int channel, const int bufferLength, c
 
 void DelayAudioProcessor::getFromDelayBuffer(juce::AudioBuffer<float>& buffer, int channel, const int bufferLength, const int delayBufferLength, const float* bufferData, const float* delayBufferData)
 {
-    int delayTime = mDelayTime;
+    int delayTime = static_cast<int> (mDelayTime.getNextValue());
+    DBG("Delay time: " << delayTime);
+
     // the read position is behind the write position by a quantinty depending on the delay time (in samples) because we want to read the samples from the past
-    const int readPosition = static_cast<int> (delayBufferLength + mWritePosition -  (mSampleRate * delayTime / 1000)) % delayBufferLength;
+    const int readPosition = static_cast<int> (delayBufferLength + mWritePosition - (mSampleRate * delayTime / 1000)) % delayBufferLength;
 
     if (delayBufferLength > bufferLength + readPosition)
     {
@@ -205,7 +210,9 @@ void DelayAudioProcessor::getFromDelayBuffer(juce::AudioBuffer<float>& buffer, i
         buffer.copyFrom(channel, 0, delayBufferData + readPosition, bufferRemaining); // taking the remaining values from the delay buffer
         buffer.copyFrom(channel, bufferRemaining, delayBufferData, bufferLength - bufferRemaining); // taking the remaining values from the beginning of the delay buffer
     }
+    
 }
+
 
 void DelayAudioProcessor::feedbackDelay(int channel, const int bufferLength, const int delayBufferLength, float* dryBuffer)
 {

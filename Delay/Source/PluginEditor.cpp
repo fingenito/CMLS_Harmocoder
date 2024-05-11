@@ -38,7 +38,7 @@ void DelayAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (15.0f);
-    g.drawFittedText ("DELAY SLIDER", 0, 0, 100, 20, juce::Justification::centred, 1);
+    g.drawFittedText ("DELAY SLIDER del diocan", 0, 0, 100, 20, juce::Justification::centred, 1);
 }
 
 void DelayAudioProcessorEditor::resized()
