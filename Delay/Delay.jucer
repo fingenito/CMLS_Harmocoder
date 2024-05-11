@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="rG84WR" name="Delay" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Climax">
   <MAINGROUP id="HA8K2Y" name="Delay">
     <GROUP id="{3AF95B10-4332-67EA-E755-DA10B16BF6B6}" name="Source">
       <FILE id="wXX1p5" name="PluginProcessor.cpp" compile="1" resource="0"
@@ -23,6 +23,7 @@
     <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -48,6 +49,7 @@
         <MODULEPATH id="juce_graphics" path="../../../Programming_juce/JUCE/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../../Programming_juce/JUCE/modules"/>
         <MODULEPATH id="juce_gui_extra" path="../../../Programming_juce/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../Programming_juce/JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>
   </EXPORTFORMATS>

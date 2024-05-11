@@ -20,12 +20,31 @@ DelayAudioProcessor::DelayAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        )
+    ,treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
+    treeState.addParameterListener("delay", this);
 }
 
 DelayAudioProcessor::~DelayAudioProcessor()
 {
+    treeState.removeParameterListener("delay", this);
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout DelayAudioProcessor::createParameterLayout()
+{
+	std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    auto pDelay = std::make_unique<juce::AudioParameterFloat>("delay", "Delay", 0.01f, 1000.0f, 500.0f);
+
+    params.push_back(std::move(pDelay));
+
+    return { params.begin(), params.end() };
+}
+
+void DelayAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    delayModule.setDelay(newValue / 1000.0f * getSampleRate());
 }
 
 //==============================================================================
@@ -93,8 +112,15 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    juce::dsp::ProcessSpec spec;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.sampleRate = sampleRate;
+    spec.numChannels = getTotalNumOutputChannels();
+
+    delayModule.prepare(spec); // so delayModule will know our sample rate etc...
+    delayModule.reset(); // clear delay buffer
+    std::fill (lastDelayOutput.begin(), lastDelayOutput.end(), 0.0f); // clear last delay output
+    delayModule.setDelay(treeState.getRawParameterValue("delay")->load() / 1000.0f * getSampleRate());
 }
 
 void DelayAudioProcessor::releaseResources()
@@ -135,27 +161,32 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    const auto numChannels = juce::jmax (totalNumInputChannels, totalNumOutputChannels);
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    auto audioBlock = juce::dsp::AudioBlock<float> (buffer).getSubsetChannelBlock (0, (size_t) numChannels);
+    auto context = juce::dsp::ProcessContextReplacing<float> (audioBlock);
+
+    const auto& input = context.getInputBlock();
+    const auto& output = context.getOutputBlock();
+
+    for (size_t channel = 0; channel < numChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        auto* samplesIn = input.getChannelPointer (channel);
+        auto* samplesOut = output.getChannelPointer (channel);
 
-        // ..do something to the data...
+        for (size_t sample = 0; sample < buffer.getNumSamples(); ++sample)
+        {
+            auto input = samplesIn[sample] - lastDelayOutput[channel]; // for feedback (?)
+
+            //auto input = samplesIn[sample];
+            delayModule.pushSample((int)channel, input);
+            samplesOut[sample] = delayModule.popSample((int)channel);
+
+            lastDelayOutput[channel] = samplesOut[sample] * 0.3; // for feedback (?)
+
+		}
     }
+
 }
 
 //==============================================================================
@@ -166,7 +197,8 @@ bool DelayAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* DelayAudioProcessor::createEditor()
 {
-    return new DelayAudioProcessorEditor (*this);
+    //return new DelayAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
