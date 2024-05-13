@@ -13,8 +13,16 @@
 DelayAudioProcessorEditor::DelayAudioProcessorEditor (DelayAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    addAndMakeVisible(delayTimeSlider);
+    delayTimeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    delayTimeSlider.setRange(0, 1000);
+    delayTimeSlider.setValue(500);
+
+    delayTimeSlider.onValueChange = [this]()
+        {
+            audioProcessor.setDelayTime(delayTimeSlider.getValue());
+        };
+
     setSize (400, 300);
 }
 
@@ -30,11 +38,10 @@ void DelayAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (15.0f);
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    g.drawFittedText ("DELAY SLIDER del diocan", 0, 0, 100, 20, juce::Justification::centred, 1);
 }
 
 void DelayAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    delayTimeSlider.setBounds(50, 50, 200, 50);
 }
