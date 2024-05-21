@@ -277,19 +277,55 @@ SynthDef.new(\pitchFollow1,{
 		out = AllpassN.ar(out, 0.040, [0.040.rand,0.040.rand], 2)
     });*/
 
-	Out.ar(0!2,(out/partials.size));
+	Out.ar(~distortionBus,(out/partials.size));
+	// Out.ar([0,1],(out/partials.size));
+
 
 
 }).add;
+
 )
 
-s.plotTree;
+
+// Crea un bus audio per collegare l'uscita del synth pitchFollow con il plugin VST3
+~distortionBus = Bus.audio(s, 2);
+
+// Definisci il synth per il plugin di distorsione VST3
+(SynthDef(\distortion, {|in, out|
+	var sound = In.ar(in, 2);
+	ReplaceOut.ar(out, VSTPlugin.ar(sound, 2, id: \distortion));
+	// Out.ar(out,Pan2.ar(VSTPlugin.ar(sound, 2, id: \distortion), 0));
+
+	// Out.ar(out,VSTPlugin.ar(sound, 2, id: \distortion));
+}).add;
+)
+// Apri il plugin VST3 di distorsione
+~distortion = VSTPluginController(Synth(\distortion, [\in, ~distorsionBus, \out, [2,3]]), id: \distortion);
+~distortion.open("C:/Program Files/Common Files/VST3/Distortion_Effect.vst3", editor:true, verbose:true);
+
+
+~distortion.editor;
+~distortion.gui;
+
+
+
+
+
 
 ~sound = Synth.new(\pitchFollow1);
 
+
+
+s.plotTree;
+s.scope;
+
+
+(
 ~sound.free;
+~distortion.close;
+)
 
-
+VSTPlugin.search;
 
 
 

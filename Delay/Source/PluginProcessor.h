@@ -64,12 +64,19 @@ public:
                 
     }
 
+    void setFeedback(float newFeedbackValue)
+    {
+
+        feedback = newFeedbackValue;
+    }
+
 private:
     juce::AudioBuffer<float> mDelayBuffer;
     int mWritePosition{ 0 }; //initialize write position to 0
     int mSampleRate{ 44100 }; //initialize global sample rate to 44100
     //int mDelayTime{ 500 }; //initialize delay time to 500ms
     juce::LinearSmoothedValue<float> mDelayTime{ 500 }; //initialize delay time to 500ms
+    float feedback{ 0.5f }; //initialize feedback to 50%
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessor)
 };

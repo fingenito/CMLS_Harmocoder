@@ -176,7 +176,7 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
 void DelayAudioProcessor::fillDelayBuffer(int channel, const int bufferLength, const int delayBufferLength, const float* bufferData, const float* delayBufferData)
 {
-    const float gain = 0.3;
+    const float gain = feedback;
     // if we have enough space in the delay buffer no problem
     if (delayBufferLength > bufferLength + mWritePosition)
     {

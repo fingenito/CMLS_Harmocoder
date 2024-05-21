@@ -26,6 +26,7 @@ public:
 
 private:
     juce::Slider delayTimeSlider;
+    juce::Slider feedbackSlider;
     DelayAudioProcessor& audioProcessor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessorEditor)
