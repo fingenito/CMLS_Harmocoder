@@ -13,7 +13,7 @@ var bufferPost = PlayBuf.ar(1!2, b, loop:1);
 
 // pitch shift input - USE HEADPHONES to prevent feedback.
 (play({
-	PitchShift.ar(
+    PitchShift.ar(
         AudioIn.ar([1,2]), // stereo audio input
         0.1,               // grain size
         MouseX.kr(0.5,2),  // mouse x controls pitch shift ratio
@@ -35,9 +35,7 @@ MIDIdef.noteOn(\noteOnTest, {
 		]
 	);
 });
-)
 
-(
 MIDIdef.noteOff(\noteOffTest, {
 	arg vel, nn;
 	~notes[nn].set(\gate, 0);
@@ -45,7 +43,7 @@ MIDIdef.noteOff(\noteOffTest, {
 });
 )
 
-(
+/*(
 MIDIdef.bend(\bendTest, {
 	arg val, chan, src;
 	/*~bend = val;*/
@@ -53,7 +51,7 @@ MIDIdef.bend(\bendTest, {
 });
 )
 
-~bend =
+~bend =*/
 
 (
 SynthDef.new(\midiHarm , {
@@ -62,7 +60,7 @@ SynthDef.new(\midiHarm , {
 
 	var bufferPost = PlayBuf.ar(1!2, b, loop:1);
 
-	/*in = Mix.new(bufferPost); // stereo audio input*/
+	//in = Mix.new(bufferPost); // stereo audio input*/
 	in = SoundIn.ar([0]); // stereo audio input
 
 	# freq, hasFreq = Pitch.kr(in);
@@ -101,10 +99,8 @@ var table;
 var mapped, mapped2, mapped3, diffbuf, diffbuf2, diffbuf3;
 var miditoname;
 var nametomidi;
-var sound;
 var difference, difference2, difference3;
 var key, majKeySteps, minKeySteps, keySteps;
-var createKey;
 var diffBtwC4;
 
 key = 60; // 60 -> (C4), ..., 71 -> (B4).
@@ -201,7 +197,6 @@ SynthDef.new(\pitchFollow1,{
 
 	var freqEnvArray = Array.newClear(0);
 
-
 	// Iterazione attraverso le note della scala cromatica
 	12.do({ |i|
 		var currentFreq = startFreq * (2 ** (i / 12)); // Calcolo della frequenza corrente
@@ -247,7 +242,7 @@ SynthDef.new(\pitchFollow1,{
 
 	partials = [
 /*		1,*/
-		0.5 * harmony,
+/*		0.5 * harmony,*/
 		harmony,
 		harmony2,
 		harmony3,
@@ -273,59 +268,40 @@ SynthDef.new(\pitchFollow1,{
 	out = Mix.new(PitchShift.ar(in, 0.2, partials, 0, 0.004));
 	/*out = Mix.new(PitchShift.ar(LFTri.ar(freqEnv), 0.1, partials, 0, 0.05));*/
 
-   /* 7.do({
-		out = AllpassN.ar(out, 0.040, [0.040.rand,0.040.rand], 2)
-    });*/
-
-	Out.ar(~distortionBus,(out/partials.size));
-	// Out.ar([0,1],(out/partials.size));
-
-
+	Out.ar(0!2,(out/partials.size));
 
 }).add;
-
 )
 
-
-// Crea un bus audio per collegare l'uscita del synth pitchFollow con il plugin VST3
-~distortionBus = Bus.audio(s, 2);
-
-// Definisci il synth per il plugin di distorsione VST3
-(SynthDef(\distortion, {|in, out|
-	var sound = In.ar(in, 2);
-	ReplaceOut.ar(out, VSTPlugin.ar(sound, 2, id: \distortion));
-	// Out.ar(out,Pan2.ar(VSTPlugin.ar(sound, 2, id: \distortion), 0));
-
-	// Out.ar(out,VSTPlugin.ar(sound, 2, id: \distortion));
-}).add;
-)
-// Apri il plugin VST3 di distorsione
-~distortion = VSTPluginController(Synth(\distortion, [\in, ~distorsionBus, \out, [2,3]]), id: \distortion);
-~distortion.open("C:/Program Files/Common Files/VST3/Distortion_Effect.vst3", editor:true, verbose:true);
-
-
-~distortion.editor;
-~distortion.gui;
-
-
-
-
-
+s.plotTree;
 
 ~sound = Synth.new(\pitchFollow1);
 
-
-
-s.plotTree;
-s.scope;
+~sound.free;
 
 
 (
-~sound.free;
-~distortion.close;
+// autotune.
+s = Server.local;
+t = ([0, 2, 4, 5, 7, 9, 11, 12] + 50).midicps;
+b = Buffer(s, t.size, 1);
+
+// alloc and set the values
+s.listSendMsg( b.allocMsg( b.setnMsg(0, t) ).postln );
+
+{
+	var index, in, out, f0, fdiff;
+	var bufnum = b;
+		// in = Pulse.ar(MouseX.kr(t.minItem, t.maxItem)) * 0.1;
+		in=AudioIn.ar(1);
+		f0 = Tartini.kr(in).at(0);
+		index = IndexInBetween.kr(bufnum, f0);
+		fdiff = index.frac * (Index.kr(bufnum, index + 1) - Index.kr(bufnum, index));
+	out = PitchShift.ar(in, 0.2, 1 - (fdiff / f0), 0, 0)0!2;
+
+}.play;
 )
 
-VSTPlugin.search;
 
 
 
