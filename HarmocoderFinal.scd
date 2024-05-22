@@ -12,11 +12,11 @@ b = Buffer.read(s, PathName(thisProcess.nowExecutingPath).parentPath ++ "Api 3#3
 
 SynthDef(\source, {
 	var sig;
-	sig = Select.ar(\choose.kr(0), [
+	sig = Select.ar(\choose.kr(1), [
 		SoundIn.ar([0,1]),
 		PlayBuf.ar(1, b, loop: 1)!2,
 	]);
-	sig = sig * \amp.kr(1);
+	sig = sig * \gain.kr(0).dbamp;
 	Out.ar(\out.kr(0), sig);
 }).add;
 
@@ -47,21 +47,21 @@ SynthDef(\pitchTracker, {
 
 // SynthDef for pitch tracking
 SynthDef(\chorus, {
-    var in, out;
+    var in, out, env;
 
 	in = In.ar(\in.ir(0),1);
 
+	env = EnvGen.kr(Env.adsr(attackTime: 2.5, decayTime: 0.3, sustainLevel: 1.0, releaseTime: 0.5, peakLevel: 1.0, curve: -4.0), \gate.kr(1));
+
 	out = DelayC.ar(in, maxdelaytime: 0.2,  delaytime: SinOsc.kr({ExpRand(0.5, 2) * \modFreq.kr(0.25)}!4).range(0, {ExpRand(0.5, 2)*\modAmount.kr(0.02)}!4));
 
-	out = Splay.ar(out);
-
-	out = Mix.ar([in * (1 - \wet.kr(1)), out * \wet.kr(1)]) * 0.5;
+	out = Splay.ar(out * \outputVolume.kr(0).dbamp * env);
 
 	Out.ar(\out.ir(0), out);
 }).add;
 
 
-SynthDef(\reverb, { |roomsize, revtime, damping, inputbw, spread = 15, drylevel, earlylevel, taillevel|
+SynthDef(\reverb, { |roomsize, revtime, damping, inputbw, spread = 15, earlylevel, taillevel|
 
 	var in = In.ar(\in.ir(0),1);
 
@@ -72,7 +72,7 @@ SynthDef(\reverb, { |roomsize, revtime, damping, inputbw, spread = 15, drylevel,
             damping,
             inputbw,
             spread,
-            drylevel.dbamp,
+            0,
             earlylevel.dbamp,
             taillevel.dbamp,
             roomsize);
@@ -81,83 +81,81 @@ SynthDef(\reverb, { |roomsize, revtime, damping, inputbw, spread = 15, drylevel,
 
 	out = RHPF.ar(out, \hPFreq.kr(100));
 
-	out = Splay.ar([in * (1 - \wet.kr(1)), out * \wet.kr(1)]) * 0.5;
-
+	out = Splay.ar(out * \outputVolume.kr(0).dbamp) * 0.5;
 
 	Out.ar(\out.ir(0), out);
 
 }).add;
 
 
-// harmonizer
-SynthDef.new(\autoHarmonizer,{
+~calculateDiffBuffer = {
+	arg key, maj = true, interval;
+	var keySteps, mapped, table, difference, buffer;
+	if (maj,
+		{keySteps = [0, 0, 2, 2, 4, 5, 5, 7, 7, 9, 9, 11]}, // maj
+		{keySteps = [0, 0, 2, 3, 3, 5, 5, 7, 8, 8, 10, 10]} // min
+	);
+	mapped = ((key + keySteps) % 12).rotate(key * -1 + interval * -1); // 0 -> (C), ..., 11 -> (B).
 
-	var table;
-	var mapped, mapped2, mapped3, diffbuf, diffbuf2, diffbuf3;
-	var difference, difference2, difference3;
-	var key, majKeySteps, minKeySteps, keySteps;
-	var in, amp, freq, hasFreq, out;
-	var midiNoteRound;
-	var harmony, harmony2, harmony3, partials;
-
-	majKeySteps = [0, 0, 2, 2, 4, 5, 5, 7, 7, 9, 9, 11]; // Maj key steps
-
-	minKeySteps = [0, 0, 2, 3, 3, 5, 5, 7, 8, 8, 10, 10]; // Min key steps
-
-	if (\selectKey.kr(1), {
-		keySteps = majKeySteps;
-	},{
-		keySteps = minKeySteps;
-	});
-
-	// define a table of reference notes [c c# d ... b]
 	table = Array.fill(12, {arg i; i}); // [0,1,...,11]
-
-	mapped = ((key + keySteps) % 12).rotate(\key.kr(0)); // 0 -> (C), ..., 11 -> (B).
-	mapped2 = mapped.rotate(-4);
-	mapped3 = mapped.rotate(-7);
-
 	difference = Array.fill(table.size, {0});
-	difference2= Array.fill(table.size, {0});
-	difference3= Array.fill(table.size, {0});
 
 	table.do({arg item, i;
 		difference[i]  = (mapped[i]  - table[i]).midiratio;
-		difference2[i] = (mapped2[i] - table[i]).midiratio;
-		difference3[i] = (mapped3[i] - table[i]).midiratio;
 	});
 
-	diffbuf = Buffer.loadCollection(s,difference ,action:{|msg| msg.postln;});
-	diffbuf2= Buffer.loadCollection(s,difference2,action:{|msg| msg.postln;});
-	diffbuf3= Buffer.loadCollection(s,difference3,action:{|msg| msg.postln;});
+	Buffer.loadCollection(s, difference);
+};
 
 
+~setKeyandScale = {
+	arg key = 0, maj = true;
+	~harmDiffbuf1.free;
+	~harmDiffbuf2.free;
+	~harmDiffbuf3.free;
 
-	in = In.ar(\in.ir(0),1);
+	~harmDiffbuf1 = ~calculateDiffBuffer.(key, maj, 0);
+	~harmDiffbuf2 = ~calculateDiffBuffer.(key, maj, 4);
+	~harmDiffbuf3 = ~calculateDiffBuffer.(key, maj, 7);
 
-	amp = Amplitude.kr(in, 0.05, 1);
+	~autoHarm.set(\harmDiffbufNum1, ~harmDiffbuf1.bufnum);
+	~autoHarm.set(\harmDiffbufNum2, ~harmDiffbuf2.bufnum);
+	~autoHarm.set(\harmDiffbufNum3, ~harmDiffbuf3.bufnum);
+};
 
-	// # freq, hasFreq = Pitch.kr(in);
+~setKeyandScale.(0,true);
+
+
+// harmonizer
+SynthDef.new(\autoHarmonizer,{
+	var in, amp, freq, hasFreq, out;
+	var midiNoteRound;
+	var harmony1, harmony2, harmony3, partials;
+
+
+	in = In.ar(\in.ir(0),2);
 
 	midiNoteRound = In.kr(~freqBus).cpsmidi.round(1);
 
-	harmony = WrapIndex.kr(diffbuf.bufnum, midiNoteRound);
-	harmony2= WrapIndex.kr(diffbuf2.bufnum, midiNoteRound);
-	harmony3= WrapIndex.kr(diffbuf3.bufnum, midiNoteRound);
+
+	harmony1 = WrapIndex.kr(\harmDiffbufNum1.kr, midiNoteRound);
+	harmony2 = WrapIndex.kr(\harmDiffbufNum2.kr, midiNoteRound);
+	harmony3 = WrapIndex.kr(\harmDiffbufNum3.kr, midiNoteRound);
 
 
 	partials = [
-		harmony/2,
-		harmony,
+		harmony1/2,
+		harmony1,
 		harmony2,
 		harmony3,
 	];
 
-	out = Mix.new(PitchShift.ar(in, 0.2, (partials.ratiomidi - In.kr(~freqBus).cpsmidi + midiNoteRound).midiratio, 0, 0.005));
+
+	out = Splay.ar(PitchShift.ar(in, 0.2, (partials.ratiomidi - In.kr(~freqBus).cpsmidi + midiNoteRound).midiratio, 0, 0.005));
 
 	out = DelayL.ar(out, delaytime: 0.07);
 
-	Out.ar(\out.ir(0),(out/partials.size)!2);
+	Out.ar(\out.ir(0),(out/partials.size));
 
 }).add;
 
@@ -214,13 +212,12 @@ MIDIdef.noteOff(\noteOffTest, {
 	~notes[nn] = nil;
 });
 
+
+SynthDef.new(\dry , {
+	Out.ar(\out.ir(0), In.ar(\in.ir(0), 2) * \outputVolume.kr(0).dbamp);
+}).add;
+
 )
-
-~chorus = Synth.new(\chorus, [\in, 3, \modFreq, 0.25, \modAmount, 0.02, \wet, 0.5, \out, 0]);
-
-~reverb = Synth(\reverb, [\in, 3, \out, 0, \wet, 0.4, \roomsize, 80, \revtime, 2, \damping, 0.41, \inputbw, 0.8, \drylevel -500, \earlylevel, -18, \taillevel, 0]);
-
-~sound = Synth.new(\autoHarmonizer, [\in, ~fxBus, \out, 0], ~fxGrp, \addToTail);
 
 (
 //setup code for busses, synths, groups
@@ -232,13 +229,14 @@ MIDIdef.noteOff(\noteOffTest, {
 	~hasFreqBus = Bus.control(s);
 	s.bind({
 		~sourceGrp = Group.new;
-		~src = Synth.new(\source, [\out, ~srcBus], ~sourceGrp);
+		~src = Synth.new(\source, [\out, ~srcBus, \gain, -6], ~sourceGrp);
 		~pitchTracker = Synth.new(\pitchTracker, [\in, ~srcBus, \freqBus, ~freqBus, \hasFreqBus, ~hasFreqBus], ~sourceGrp, \addToTail);
 		~synthGrp = Group.after(~sourceGrp);
-		~autoHarm = Synth.new(\autoHarmonizer, [\in, ~srcBus, \out, ~fxBus], ~synthGrp, \addToTail);
+		~autoHarm = Synth.new(\autoHarmonizer, [\in, ~srcBus, \out, ~fxBus, \harmDiffbufNum1, ~harmDiffbuf1.bufnum, \harmDiffbufNum2, ~harmDiffbuf2.bufnum, \harmDiffbufNum3, ~harmDiffbuf3.bufnum], ~synthGrp, \addToTail);
 		~fxGrp = Group.after(~synthGrp);
-		~reverb = Synth(\reverb, [\in, ~fxBus, \out, 0, \wet, 0.3, \roomsize, 80, \revtime, 2, \damping, 0.41, \inputbw, 0.8, \drylevel -500, \earlylevel, -18, \taillevel, 0], ~fxGrp, \addToTail);
+		~reverb = Synth(\reverb, [\in, ~fxBus, \out, 0, \wet, 0.6, \roomsize, 80, \revtime, 2, \damping, 0.41, \inputbw, 0.8, \earlylevel, -18, \taillevel, 0], ~fxGrp, \addToTail);
 		~chorus = Synth.new(\chorus, [\in, ~fxBus, \out, 0, \wet, 0.7, \modFreq, 0.25, \modAmount, 0.02], ~fxGrp, \addToTail);
+		~dry =  Synth.new(\dry, [\in, ~fxBus, \out, 0, \outputVolume, -6], ~fxGrp, \addToTail);
 
 	});
 };
@@ -246,9 +244,34 @@ ServerTree.removeAll;
 ServerTree.add(~setup);
 )
 
-Synth.new(\source, [\out, 0]);
+~src2 = Synth.new(\source, [\out, ~fxBus, \gain, -6], ~sourceGrp);
 
+
+// ____ SOURCE
+~src.set(\choose, 1);  // buffer in
+~src.set(\choose, 0);  // audio in
+~src.set(\gain, -inf); // nulls input
+~src.set(\gain, 3);   //
 // ____
-~src.set(\choose, 1); // buffer
-~src.set(\choose, 0); // audio in
+
+// ____ CHORUS
+~chorus.set(\outputVolume, -100);
+~chorus.set(\outputVolume, 0);
+~chorus.set(\gate, 0);
+~chorus.set(\gate, 1);
 // ____
+
+// ____ REVERB
+~reverb.set(\outputVolume, -100);
+~reverb.set(\outputVolume, 0);
+// ____
+
+
+// ____ DRY
+~dry.set(\outputVolume, -100);
+~dry.set(\outputVolume, -18);
+// ____
+
+
+~setKeyandScale.(1, false); // C# min
+~setKeyandScale.(0, true);  // C maj
