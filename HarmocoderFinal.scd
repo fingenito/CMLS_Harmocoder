@@ -22,7 +22,7 @@ VSTPlugin.search;
 		~chorus = Synth.new(\chorus, [\in, ~fxBus, \out, 0, \wet, 0.7, \modFreq, 0.25, \modAmount, 0.08], ~fxGrp, \addToTail);
 		~distortion = Synth.new(\distortion, [\in, ~fxBus, \out, 0], ~fxGrp, \addToTail);
 		~distortionPlugin = VSTPluginController(~distortion, id:\distortion);
-		~distortionPlugin.open("C:/Program Files/Common Files/VST3/Distortion_Effect.vst3", editor: true, verbose: false);
+		~distortionPlugin.open("C:/Program Files/Common Files/VST3/Distortion_Effect.vst3", editor: false, verbose: false);
 		~drySynth =  Synth.new(\dry, [\in, ~fxBus, \out, 0, \outputVolume, 0], ~fxGrp, \addToTail);
 		~dryMic =  Synth.new(\dry, [\in, ~srcBus, \out, 0, \outputVolume, -12], ~fxGrp, \addToTail);
 
@@ -40,7 +40,8 @@ ServerTree.add(~setup);
 
 (
 
-b = Buffer.read(s, PathName(thisProcess.nowExecutingPath).parentPath ++ "Api 3#30.aif");
+// b = Buffer.read(s, PathName(thisProcess.nowExecutingPath).parentPath ++ "Api 3#30.aif");
+b = Buffer.read(s, PathName(thisProcess.nowExecutingPath).parentPath ++ "audio_sample.mp3");
 
 // b = Buffer.read(s, PathName(thisProcess.nowExecutingPath).parentPath ++ "post.wav");
 
@@ -73,10 +74,6 @@ SynthDef(\pitchTracker, {
 	hasFreq = hasFreq * (amp >= 0.01);
 
 	freq = Clip.kr(freq, 34.midicps, 84.midicps);
-
-	// [freq.cpsmidi, hasFreq].poll;
-
-	// amp.poll;
 
     Out.kr(\freqBus.ir(0), freq);
     Out.kr(\hasFreqBus.ir(0), hasFreq);
@@ -166,14 +163,13 @@ SynthDef.new(\distortion , {
 	~autoHarm.set(\harmDiffbufNum3, ~harmDiffbuf3.bufnum);
 };
 
-~setKeyandScale.(0,true);
-
 
 // harmonizer
 SynthDef.new(\autoHarmonizer,{
 	var in, amp, freq, hasFreq, out;
 	var midiNoteRound;
 	var harmony1, harmony2, harmony3, partials;
+	var env;
 
 
 	in = In.ar(\in.ir(0),2);
@@ -193,12 +189,13 @@ SynthDef.new(\autoHarmonizer,{
 		harmony3,
 	];
 
+	env = EnvGen.kr(Env.adsr(attackTime: 0.5, decayTime: 0.3, sustainLevel: 1.0, releaseTime: 0.5, peakLevel: 1.0, curve: -4.0), \gate.kr(1));
 
 	out = Splay.ar(PitchShift.ar(in, 0.2, (partials.ratiomidi - In.kr(~freqBus).cpsmidi + midiNoteRound).midiratio, 0, 0.005), spread: 0.3);
 
 	out = DelayL.ar(out, delaytime: 0.07);
 
-	Out.ar(\out.ir(0),out * \outVolume.kr(0).dbamp);
+	Out.ar(\out.ir(0),out * \outVolume.kr(0).dbamp * env);
 
 }).add;
 
@@ -262,12 +259,7 @@ SynthDef.new(\dry , {
 
 )
 
-
-
-~src2 = Synth.new(\source, [\out, ~fxBus, \gain, -24], ~sourceGrp);
-
-
-// ____ SOURCE
+/*// ____ SOURCE
 ~src.set(\choose, 1);  // buffer in
 ~src.set(\choose, 0);  // audio in
 ~src.set(\gain, -inf); // nulls input
@@ -299,58 +291,111 @@ SynthDef.new(\dry , {
 
 
 ~setKeyandScale.(1, false); // C# min
-~setKeyandScale.(0, true);  // C maj
+~setKeyandScale.(0, true);  // C maj*/
 
 
 
 // COMMUNICATION WITH ARDUINO AND PROCESSING
 // opening serial communication to speak with arduino
 (
-p = SerialPort(
+~ardToScCanal = SerialPort(
     "COM6",    //edit to match your port. SerialPort.listDevices
     baudrate: 115200,    //check that baudrate is the same as in arduino sketch
     crtscts: true);
-)
 
-// sending msg to processing
-thisProcess.openUDPPort(12000);
-b = NetAddr.new("127.0.0.1", 12000);
+~scToProcCanal = NetAddr.new("127.0.0.1", 12000);
 
-(
 ~routineCommunication= Routine({
-    var byte, str, arduinoMsg, arduinoMsgsplitted;
-    99999.do{|i|
-        if(p.read==10, {
-            str = "";
-            while({byte = p.read; byte !=13 }, {
-                str= str++byte.asAscii;
-            });
-            arduinoMsg= str;
+	var byte, str, arduinoMsg, arduinoMsgsplitted;
+	var grayScaleValue, accYValue, accZValue;
+
+	// reading msgs from arduino and sending them to processing
+	99999.do{|i|
+		if(~ardToScCanal.read==10, {
+			str = "";
+			while({byte = ~ardToScCanal.read; byte !=13 }, {
+				str= str++byte.asAscii;
+			});
+			arduinoMsg= str;
 
 			// format of arduino msg = "grayScaleValue, accYValue, accZValue"
 			// Separare la stringa utilizzando il delimitatore ", "
 			arduinoMsgsplitted = arduinoMsg.split($,);
 
+			grayScaleValue = arduinoMsgsplitted[0].asFloat.linlin(0, 1024, 0, 1);
+			accYValue = arduinoMsgsplitted[1].asInteger;
+			accZValue = arduinoMsgsplitted[2].asInteger;
 
 			// setting the reverb based on grayscale sensor
-			~reverb.set(\outputVolume, arduinoMsgsplitted[0].asFloat.linlin(0, 1024, 0, 1));
-			~distortion.set(\gate,  arduinoMsgsplitted[1].asInteger);
-			~chorus.set(\gate,  arduinoMsgsplitted[2].asInteger);
+			~reverb.set(\outputVolume, grayScaleValue);
+			~distortion.set(\gate, accYValue);
+			~chorus.set(\gate, accZValue);
 
-
-
-			/*mapped_value = res.linlin(0, 1024, 0, 1);
-			mapped_value.postln;
-			~effect1.set(2, mapped_value);
-			b.sendMsg("/sliderMsg", mapped_value);*/
+			// sending msgs taken from arduino to processing
+			~scToProcCanal.sendMsg("/reverbValueMsg", grayScaleValue);
+			~scToProcCanal.sendMsg("/accYValueMsg", accYValue);
+			~scToProcCanal.sendMsg("/accZValueMsg", accZValue);
 
 			0.001.wait
-        });
-    };
+		});
+	};
+
 }).play;
+
+
+// receiving msgs from processing (sent by the user) to set some parameters on sc
+
+OSCdef('OSCreceiverHarmSelection',
+	{
+		arg msg;
+
+		msg.postln;
+
+		if (
+			msg[1].asString == "harmonizer",
+			{~autoHarm.set(\gate, 1); msg[1].asString},
+			{~autoHarm.set(\gate, 0)}
+		);
+
+
+
+    }, '/harmSelected', nil, 57120);
+
+OSCdef('OSCreceiverHarmSettings',
+	{
+		arg msg;
+
+		var key, majorMinor;
+
+		majorMinor = msg[1].asString == "major";
+		key = msg[2].asInteger;
+
+		~setKeyandScale.(key, false); // C# min
+
+
+    }, '/harmSetting', nil, 57120);
+
+OSCdef('OSCreceiverVoiceLevel',
+	{
+		arg msg;
+
+		msg.postln;
+
+		~dryMic.set(\outputVolume, msg[1].asFloat.ampdb);
+
+
+
+    }, '/voiceLevel', nil, 57120);
 )
+
+
+
+// ______ STOPPA TUTTO CI STANNO TRACCIANDO _____
+(
+ServerTree.removeAll;
 ~routineCommunication.stop;
-p.close;
+~ardToScCanal.close;
+~scToProcCanal.stop;
+)
 
 
-// GRAYSCALE SENSOR -> CHANGE REVERB IN SC -> SLIDER VISUALIZED IN PROCESSING
