@@ -44,9 +44,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout Distortion_EffectAudioProces
     juce::StringArray disModels = {"Hard", "Soft", "Saturation" };
 
     auto pDriveModel = std::make_unique<juce::AudioParameterChoice>(disModelID, disModelName, disModels, 0);
-    auto pDrive = std::make_unique<juce::AudioParameterFloat>(inputID, inputName, 0.0f, 24.0f, 0.0f);
-    auto pMix = std::make_unique<juce::AudioParameterFloat>(mixID, mixName, 0.0f, 24.0f, 0.0f);
-    auto pOutput = std::make_unique<juce::AudioParameterFloat>(outputID, outputName, -24.0f, 24.0f, 0.0f);
+    auto pDrive = std::make_unique<juce::AudioParameterFloat>(inputID, inputName, 0.0f, 48.0f, 0.0f);
+    auto pMix = std::make_unique<juce::AudioParameterFloat>(mixID, mixName, 0.0f, 1.0f, 1.0f);
+    auto pOutput = std::make_unique<juce::AudioParameterFloat>(outputID, outputName, -48.0f, 48.0f, 0.0f);
 
     params.push_back(std::move(pDriveModel));
     params.push_back(std::move(pDrive));

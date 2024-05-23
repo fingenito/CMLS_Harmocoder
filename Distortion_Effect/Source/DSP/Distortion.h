@@ -74,9 +74,9 @@ public:
     {
         auto wetSignal = inputSample * juce::Decibels::decibelsToGain(_input.getNextValue());
 
-        if (std::abs(wetSignal) > 0.99)
+        if (std::abs(wetSignal) > 0.8)
         {
-			wetSignal *= 0.99 / std::abs(wetSignal);
+			wetSignal *= 0.8 / std::abs(wetSignal);
 		}
 
         auto mix = (1.0 - _mix.getNextValue()) * inputSample + wetSignal * _mix.getNextValue();
@@ -86,16 +86,16 @@ public:
 
     SampleType processSoftClipper(SampleType inputSample)
     {
-        auto wetSignal = inputSample * juce::Decibels::decibelsToGain(_input.getNextValue());
+        auto wetSignal = inputSample * juce::Decibels::decibelsToGain(_input.getNextValue() );
 
-        wetSignal = _piDivisor * std::atan(wetSignal);
+        wetSignal = std::tanh(wetSignal);
 
         wetSignal *= 2.0;
         wetSignal *= juce::Decibels::decibelsToGain(_input.getNextValue() * -0.25);
 
-        if (std::abs(wetSignal) > 0.99)
+        if (std::abs(wetSignal) > 0.9)
         {
-            wetSignal *= 0.99 / std::abs(wetSignal);
+            wetSignal *= 0.9 / std::abs(wetSignal);
         }
 
         auto mix = (1.0 - _mix.getNextValue()) * inputSample + wetSignal * _mix.getNextValue();
