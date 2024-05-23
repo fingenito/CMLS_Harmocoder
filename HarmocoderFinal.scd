@@ -1,6 +1,43 @@
 s.boot;
 s.meter;
 
+VSTPlugin.search;
+
+(
+//setup code for busses, synths, groups
+~setup = {
+	s.newBusAllocators;
+	~fxBus = Bus.audio(s,2);
+	~srcBus = Bus.audio(s,2);
+	~freqBus = Bus.control(s);
+	~hasFreqBus = Bus.control(s);
+	s.bind({
+		~sourceGrp = Group.new;
+		~src = Synth.new(\source, [\out, ~srcBus, \gain, 0], ~sourceGrp);
+		~pitchTracker = Synth.new(\pitchTracker, [\in, ~srcBus, \freqBus, ~freqBus, \hasFreqBus, ~hasFreqBus], ~sourceGrp, \addToTail);
+		~synthGrp = Group.after(~sourceGrp);
+		~autoHarm = Synth.new(\autoHarmonizer, [\in, ~srcBus, \out, ~fxBus, \harmDiffbufNum1, ~harmDiffbuf1.bufnum, \harmDiffbufNum2, ~harmDiffbuf2.bufnum, \harmDiffbufNum3, ~harmDiffbuf3.bufnum], ~synthGrp, \addToTail);
+		~fxGrp = Group.after(~synthGrp);
+		~reverb = Synth(\reverb, [\in, ~fxBus, \out, 0, \wet, 0.6, \roomsize, 80, \revtime, 2, \damping, 0.41, \inputbw, 0.8, \earlylevel, -18, \taillevel, 0], ~fxGrp, \addToTail);
+		~chorus = Synth.new(\chorus, [\in, ~fxBus, \out, 0, \wet, 0.7, \modFreq, 0.25, \modAmount, 0.08], ~fxGrp, \addToTail);
+		~distortion = Synth.new(\distortion, [\in, ~fxBus, \out, 0], ~fxGrp, \addToTail);
+		~distortionPlugin = VSTPluginController(~distortion, id:\distortion);
+		~distortionPlugin.open("C:/Program Files/Common Files/VST3/Distortion_Effect.vst3", editor: true, verbose: false);
+		~drySynth =  Synth.new(\dry, [\in, ~fxBus, \out, 0, \outputVolume, 0], ~fxGrp, \addToTail);
+		~dryMic =  Synth.new(\dry, [\in, ~srcBus, \out, 0, \outputVolume, -12], ~fxGrp, \addToTail);
+
+	});
+	0.5.wait;
+	~distortionPlugin.set(0, "Hard");
+	~distortionPlugin.set(1, 1);
+	~distortionPlugin.set(2, 1);
+	~distortionPlugin.set(3, 0.092);
+	~distortionPlugin.editor;
+};
+ServerTree.removeAll;
+ServerTree.add(~setup);
+)
+
 (
 
 b = Buffer.read(s, PathName(thisProcess.nowExecutingPath).parentPath ++ "Api 3#30.aif");
@@ -49,13 +86,13 @@ SynthDef(\pitchTracker, {
 SynthDef(\chorus, {
     var in, out, env;
 
-	in = In.ar(\in.ir(0),1);
+	in = In.ar(\in.ir(0),1) * \inVolume.kr(0).dbamp;
 
 	env = EnvGen.kr(Env.adsr(attackTime: 2.5, decayTime: 0.3, sustainLevel: 1.0, releaseTime: 0.5, peakLevel: 1.0, curve: -4.0), \gate.kr(1));
 
 	out = DelayC.ar(in, maxdelaytime: 0.2,  delaytime: SinOsc.kr({ExpRand(0.5, 2) * \modFreq.kr(0.25)}!4).range(0, {ExpRand(0.5, 2)*\modAmount.kr(0.02)}!4));
 
-	out = Splay.ar(out * \outputVolume.kr(0).dbamp * env);
+	out = Splay.ar(out * env);
 
 	Out.ar(\out.ir(0), out);
 }).add;
@@ -63,7 +100,7 @@ SynthDef(\chorus, {
 
 SynthDef(\reverb, { |roomsize, revtime, damping, inputbw, spread = 15, earlylevel, taillevel|
 
-	var in = In.ar(\in.ir(0),1);
+	var in = In.ar(\in.ir(0),1) * \inVolume.kr(0).dbamp;
 
 	var out = GVerb.ar(
             in,
@@ -81,10 +118,16 @@ SynthDef(\reverb, { |roomsize, revtime, damping, inputbw, spread = 15, earlyleve
 
 	out = RHPF.ar(out, \hPFreq.kr(100));
 
-	out = Splay.ar(out * \outputVolume.kr(0).dbamp) * 0.5;
+	out = Splay.ar(out * \outputVolume.kr(1));
 
 	Out.ar(\out.ir(0), out);
 
+}).add;
+
+SynthDef.new(\distortion , {
+	var env;
+	env = EnvGen.kr(Env.adsr(attackTime: 2.5, decayTime: 0.3, sustainLevel: 1.0, releaseTime: 0.5, peakLevel: 1.0, curve: -4.0), \gate.kr(1));
+	Out.ar(\out.ir(0), VSTPlugin.ar(In.ar(\in.ir(0), 2) * \inVolume.kr(0).dbamp, 2, id:\distortion) * env);
 }).add;
 
 
@@ -151,11 +194,11 @@ SynthDef.new(\autoHarmonizer,{
 	];
 
 
-	out = Splay.ar(PitchShift.ar(in, 0.2, (partials.ratiomidi - In.kr(~freqBus).cpsmidi + midiNoteRound).midiratio, 0, 0.005));
+	out = Splay.ar(PitchShift.ar(in, 0.2, (partials.ratiomidi - In.kr(~freqBus).cpsmidi + midiNoteRound).midiratio, 0, 0.005), spread: 0.3);
 
 	out = DelayL.ar(out, delaytime: 0.07);
 
-	Out.ar(\out.ir(0),(out/partials.size));
+	Out.ar(\out.ir(0),out * \outVolume.kr(0).dbamp);
 
 }).add;
 
@@ -219,39 +262,16 @@ SynthDef.new(\dry , {
 
 )
 
-(
-//setup code for busses, synths, groups
-~setup = {
-	s.newBusAllocators;
-	~fxBus = Bus.audio(s,2);
-	~srcBus = Bus.audio(s,2);
-	~freqBus = Bus.control(s);
-	~hasFreqBus = Bus.control(s);
-	s.bind({
-		~sourceGrp = Group.new;
-		~src = Synth.new(\source, [\out, ~srcBus, \gain, -6], ~sourceGrp);
-		~pitchTracker = Synth.new(\pitchTracker, [\in, ~srcBus, \freqBus, ~freqBus, \hasFreqBus, ~hasFreqBus], ~sourceGrp, \addToTail);
-		~synthGrp = Group.after(~sourceGrp);
-		~autoHarm = Synth.new(\autoHarmonizer, [\in, ~srcBus, \out, ~fxBus, \harmDiffbufNum1, ~harmDiffbuf1.bufnum, \harmDiffbufNum2, ~harmDiffbuf2.bufnum, \harmDiffbufNum3, ~harmDiffbuf3.bufnum], ~synthGrp, \addToTail);
-		~fxGrp = Group.after(~synthGrp);
-		~reverb = Synth(\reverb, [\in, ~fxBus, \out, 0, \wet, 0.6, \roomsize, 80, \revtime, 2, \damping, 0.41, \inputbw, 0.8, \earlylevel, -18, \taillevel, 0], ~fxGrp, \addToTail);
-		~chorus = Synth.new(\chorus, [\in, ~fxBus, \out, 0, \wet, 0.7, \modFreq, 0.25, \modAmount, 0.02], ~fxGrp, \addToTail);
-		~dry =  Synth.new(\dry, [\in, ~fxBus, \out, 0, \outputVolume, -6], ~fxGrp, \addToTail);
 
-	});
-};
-ServerTree.removeAll;
-ServerTree.add(~setup);
-)
 
-~src2 = Synth.new(\source, [\out, ~fxBus, \gain, -6], ~sourceGrp);
+~src2 = Synth.new(\source, [\out, ~fxBus, \gain, -24], ~sourceGrp);
 
 
 // ____ SOURCE
 ~src.set(\choose, 1);  // buffer in
 ~src.set(\choose, 0);  // audio in
 ~src.set(\gain, -inf); // nulls input
-~src.set(\gain, 3);   //
+~src.set(\gain, 0);   //
 // ____
 
 // ____ CHORUS
@@ -261,17 +281,76 @@ ServerTree.add(~setup);
 ~chorus.set(\gate, 1);
 // ____
 
+// ____ DISTORTION
+~distortion.set(\gate, 0);
+~distortion.set(\gate, 1);
+// ____
+
 // ____ REVERB
-~reverb.set(\outputVolume, -100);
 ~reverb.set(\outputVolume, 0);
+~reverb.set(\outputVolume, 1);
 // ____
 
 
 // ____ DRY
-~dry.set(\outputVolume, -100);
-~dry.set(\outputVolume, -18);
+~dryMic.set(\outputVolume, -inf);
+~dryMic.set(\outputVolume, -12);
 // ____
 
 
 ~setKeyandScale.(1, false); // C# min
 ~setKeyandScale.(0, true);  // C maj
+
+
+
+// COMMUNICATION WITH ARDUINO AND PROCESSING
+// opening serial communication to speak with arduino
+(
+p = SerialPort(
+    "COM6",    //edit to match your port. SerialPort.listDevices
+    baudrate: 115200,    //check that baudrate is the same as in arduino sketch
+    crtscts: true);
+)
+
+// sending msg to processing
+thisProcess.openUDPPort(12000);
+b = NetAddr.new("127.0.0.1", 12000);
+
+(
+~routineCommunication= Routine({
+    var byte, str, arduinoMsg, arduinoMsgsplitted;
+    99999.do{|i|
+        if(p.read==10, {
+            str = "";
+            while({byte = p.read; byte !=13 }, {
+                str= str++byte.asAscii;
+            });
+            arduinoMsg= str;
+
+			// format of arduino msg = "grayScaleValue, accYValue, accZValue"
+			// Separare la stringa utilizzando il delimitatore ", "
+			arduinoMsgsplitted = arduinoMsg.split($,);
+
+
+			// setting the reverb based on grayscale sensor
+			~reverb.set(\outputVolume, arduinoMsgsplitted[0].asFloat.linlin(0, 1024, 0, 1));
+			~distortion.set(\gate,  arduinoMsgsplitted[1].asInteger);
+			~chorus.set(\gate,  arduinoMsgsplitted[2].asInteger);
+
+
+
+			/*mapped_value = res.linlin(0, 1024, 0, 1);
+			mapped_value.postln;
+			~effect1.set(2, mapped_value);
+			b.sendMsg("/sliderMsg", mapped_value);*/
+
+			0.001.wait
+        });
+    };
+}).play;
+)
+~routineCommunication.stop;
+p.close;
+
+
+// GRAYSCALE SENSOR -> CHANGE REVERB IN SC -> SLIDER VISUALIZED IN PROCESSING

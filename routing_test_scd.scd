@@ -25,7 +25,7 @@ OSCdef('OSCreceiver',
 )
 
 (
-OSCdef('OSCreceiver',
+OSCdef('OSCreceiver1',
 	{
 		arg msg;
 
@@ -43,7 +43,7 @@ OSCdef('OSCreceiver',
 		    }
 		);*/
 
-    }, '/harmonizerSetting', nil, 57120);
+    }, '/harmSetting', nil, 57120);
 )
 
 
