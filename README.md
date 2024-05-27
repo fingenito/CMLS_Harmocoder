@@ -9,6 +9,7 @@ This project combines SuperCollider, JUCE, Arduino, and Processing to create a m
 - SuperCollider
 - JUCE
 - Arduino IDE
+- Processing IDE
 - An Arduino (e.g., Arduino Uno)
 - Grove 3-Axis Digital Accellerometer (±16g)
 - Analog greyscale Sensor
