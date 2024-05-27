@@ -62,8 +62,9 @@ That's the reason why we adopted a really basic GUI (implemented in Processing),
 ## Setting up the system
 
 ### Arduino
-1. Connect wirings to the Arduino as described in `arduino/firmware/wiring_diagram.jpg`.
-2. Upload the firmware provided in the `Source/Arduino/detectionSensors` directory to the Arduino board using the Arduino IDE. At this point if you keep connected the board to your computer, Arduino should has already started sending messages via serial communication.
+1. Connect wirings to the Arduino as described in the figure ![image](https://github.com/fingenito/CMLS_Harmocoder/assets/83732019/bfd5050c-8dd9-446b-914c-2c9c4fe83a8d)
+<img src="[URL_dell'immagine](https://github.com/fingenito/CMLS_Harmocoder/assets/83732019/bfd5050c-8dd9-446b-914c-2c9c4fe83a8d)" style="width:10px; height:auto;" />
+1. Upload the firmware provided in the `Source/Arduino/detectionSensors` directory to the Arduino board using the Arduino IDE. At this point if you keep connected the board to your computer, Arduino should has already started sending messages via serial communication.
 
 
 ### Juce
@@ -86,8 +87,9 @@ That's the reason why we adopted a really basic GUI (implemented in Processing),
 ## Usage
 
 Connect your MIDI keyboard to your computer and see the tutorial at this [AGGIUNGI VIDEO] link to understand how to interact with the GUI!
+<iframe width="761" height="428" src="https://www.youtube.com/embed/mCdrUwX26Fw" title="Video Presentation CMLS exam a.y. 2023/24" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-
+https://youtu.be/mCdrUwX26Fw
 ---
 
 Thank you for choosing our Harmonizer! We hope you enjoy creating music with this unique tool.
