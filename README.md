@@ -21,6 +21,8 @@ That's the reason why we adopted a really basic GUI, trying to avoid the annoyin
 - Arduino IDE
 - An Arduino (e.g., Arduino Uno)
 - Hardware components (potentiometers, buttons, etc.)
+- Grove 3-Axis Digital Accellerometer (±16g)
+- Analog greyscale Sensor
 - Wires and breadboard for connections
 
 ## Installation
@@ -29,6 +31,7 @@ That's the reason why we adopted a really basic GUI, trying to avoid the annoyin
 
 1. Download and install SuperCollider from the [official website](https://supercollider.github.io/download).
 2. Install any necessary plugins by following the instructions on the SuperCollider website.
+3. Install sc3 supecollider exstensions
 
 ### JUCE
 
@@ -39,6 +42,12 @@ That's the reason why we adopted a really basic GUI, trying to avoid the annoyin
 
 1. Download and install the Arduino IDE from the [official website](https://www.arduino.cc/en/software).
 2. Upload the firmware for the Arduino provided in the `arduino/firmware` directory.
+
+### Processing
+
+1. Download and install the Processing IDE from the [official website](https://processing.org/download).
+2. Run the processing code provided in the ........ directory.
+
 
 ## Project Structure
 
@@ -51,7 +60,7 @@ That's the reason why we adopted a really basic GUI, trying to avoid the annoyin
 
 ## Hardware Setup
 
-1. Connect the potentiometers and buttons to the Arduino as described in `arduino/firmware/wiring_diagram.png`.
+1. Connect wirings to the Arduino as described in `arduino/firmware/wiring_diagram.png`.
 2. Upload the firmware to the Arduino using the Arduino IDE.
 
 ## Software Setup
@@ -61,11 +70,9 @@ That's the reason why we adopted a really basic GUI, trying to avoid the annoyin
 1. Open `supercollider/harmonizer.scd` in SuperCollider.
 2. Execute the code by pressing `Ctrl+Enter` (Windows/Linux) or `Cmd+Enter` (Mac).
 
-### JUCE
+### Distortion Plugin
 
-1. Open the JUCE project (`juce/Harmonizer.jucer`) using Projucer.
-2. Configure the project for your preferred IDE.
-3. Build and run the project.
+1. Open
 
 ### Arduino
 
@@ -74,33 +81,10 @@ That's the reason why we adopted a really basic GUI, trying to avoid the annoyin
 
 ## Usage
 
-1. Launch the JUCE application. A window with controls for the harmonizer parameters should appear.
+1. Launch the  application. A window with controls for the harmonizer parameters should appear.
 2. Adjust the parameters using the JUCE user interface or the physical controls connected to the Arduino.
 3. Use SuperCollider to send audio signals to the harmonizer and listen to the output.
 
-## Troubleshooting
-
-- Ensure the Arduino is properly connected and recognized by the computer.
-- Verify all wires are securely connected and the potentiometers and buttons are functioning correctly.
-- Check error messages in SuperCollider and JUCE to identify any issues.
-
-## Contributing
-
-We welcome contributions! If you would like to improve this project, please follow these guidelines:
-
-1. Fork the repository.
-2. Create a branch for your changes (`git checkout -b feature/your-feature-name`).
-3. Commit your changes (`git commit -m 'Add a feature'`).
-4. Push the branch (`git push origin feature/your-feature-name`).
-5. Create a Pull Request.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
-
-## Contact
-
-For more information or questions, you can contact the development team at: devteam@example.com.
 
 ---
 
