@@ -1,7 +1,7 @@
 /*****************************************************************************/
 //	Function:    Get the accelemeter of X/Y/Z axis and print out on the
 //					serial monitor.
-//  Hardware:    3-Axis Digital Accelerometer(��16g)
+//  Hardware:    3-Axis Digital Accelerometer(±16g)
 //	Arduino IDE: Arduino-1.0
 //	Author:	 Frankie.Chu
 //	Date: 	 Jan 11,2013
@@ -26,7 +26,6 @@
 
 #include <Wire.h>
 #include <ADXL345.h>
-
 
 ADXL345 adxl;  //variable adxl is an instance of the ADXL345 library
 
@@ -97,15 +96,13 @@ void setup() {
   adxl.setInterrupt(ADXL345_INT_INACTIVITY_BIT, 1);
 
   // initialize array to 0
-  for (int i = 0; i<3; i++) {
+  for (int i = 0; i < 3; i++) {
     sensorValues[i] = 0.0;
   }
 }
 
 void loop() {
 
-  
-  
   // adding grayVal 
   sensorValues[0] = analogRead(A1);
 
@@ -115,8 +112,6 @@ void loop() {
   ax = xyz[0];
   ay = xyz[1];
   az = xyz[2];
-
-
 
   // PRINT Y VALUES
   // Serial.print("ay:");
@@ -140,10 +135,8 @@ void loop() {
   // Serial.print(-4);
   // Serial.println("");
 
-
-
   // CONSIDERING Y DIRECTION----------------------------------------
-  // form left to right 
+  // from left to right 
 
   if (ay < minTreshY) {
     startTimerY = millis();
@@ -157,13 +150,12 @@ void loop() {
     flagDownY = false;
   }
 
-
   if ((millis() - startTimerY) > 250 && flagDownY) {
     startTimerY = millis();
     flagDownY = false;
   }
 
-  // form right to left
+  // from right to left
 
   if (ay > maxTreshY) {
     startTimerY = millis();
@@ -182,9 +174,8 @@ void loop() {
     flagUpY = false;
   }
 
-
   // CONSIDERING Z DIRECTION----------------------------------------
-  // form left to right 
+  // from top to bottom 
 
   if (az < minTreshZ) {
     startTimerZ = millis();
@@ -192,19 +183,18 @@ void loop() {
   }
 
   if (flagDownZ && az > maxTreshZ) {
-    //Serial.print("OFF-Z from up to down\n");
+    //Serial.print("OFF-Z from top to bottom\n");
     sensorValues[2] = 0.0;
     startTimerZ = millis();
     flagDownZ = false;
   }
 
-
   if ((millis() - startTimerZ) > 250 && flagDownZ) {
     startTimerZ = millis();
     flagDownZ = false;
-    }
+  }
 
-  // form right to left
+  // from bottom to top
 
   if (az > maxTreshZ) {
     startTimerZ = millis();
@@ -212,7 +202,7 @@ void loop() {
   }
 
   if (flagUpZ && az < minTreshZ) {
-    // Serial.print("ON-Z (form down to up)\n");
+    // Serial.print("ON-Z (from bottom to top)\n");
     sensorValues[2] = 1.0;
     startTimerZ = millis();
     flagUpZ = false;
