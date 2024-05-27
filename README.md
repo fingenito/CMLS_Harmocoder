@@ -83,6 +83,10 @@ Connect your MIDI keyboard to your computer and see the tutorial to understand h
 
 https://github.com/fingenito/CMLS_Harmocoder/assets/83732019/a5788125-538e-440a-909c-f75b8c620f92
 
+## Usage
+
+Project realized by Flavio Ingenito (flavio.ingenito@mail.polimi.it), Giorgio Magalini (giorgio.magalini@mail.polimi.it) and Mattia Montanari (mattia.montanari@mail.polimi.it).
+
 ---
 
 Thank you for choosing our Harmonizer! We hope you enjoy creating music with this unique tool.
